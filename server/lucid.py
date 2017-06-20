@@ -11,4 +11,4 @@ def build_user(user_id, user):
 
 def get_user(user_id):
     global firebase
-    return json.dumps(firebase.get(user_id))
+    return json.dumps(firebase.get(user_id, None))

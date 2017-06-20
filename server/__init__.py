@@ -19,17 +19,20 @@ BASE_URL = ''
 
 
 def recognize(image):
-    for img in glob.glob('static/snaps/*.jpg'):
-        snap = face_recognition.load_image_file(img)
-        face_encoding = face_recognition.face_encodings(snap)[0]
+    try:
+        for img in glob.glob('static/snaps/*.jpg'):
+            snap = face_recognition.load_image_file(img)
+            face_encoding = face_recognition.face_encodings(snap)[0]
 
-        unknown_picture = face_recognition.load_image_file(image)
-        unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[0]
+            unknown_picture = face_recognition.load_image_file(image)
+            unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[0]
 
-        results = face_recognition.compare_faces([face_encoding], unknown_face_encoding)
+            results = face_recognition.compare_faces([face_encoding], unknown_face_encoding)
 
-        if results[0]:
-            return os.path.basename(img)
+            if results[0]:
+                return os.path.basename(img)
+    except Exception as e:
+        print e
     return None
 
 
@@ -40,19 +43,27 @@ def test():
 
 @socketio.on('image_sent')
 def image_sent(raw):
+    print 'got image'
     file_name = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(0, 6))\
                 + '.jpg'
     file_path = 'static/tmp/' + file_name
     img = Image.open(io.BytesIO(raw))
     img.save(file_path)
 
+    print 'saved image'
+
     user_id = recognize(file_path)
 
+    print 'recognized face'
+
     if user_id is not None:
-        user = lucid.get_user(user_id)
+        user = lucid.get_user(user_id.replace('.jpg', ''))
+        print 'got profile'
         emit('response', user)
     else:
         print 'user is not recognized'
+        emit('response', '{}')
+    os.remove(file_path)
 
 
 @app.route('/<path:path>')
