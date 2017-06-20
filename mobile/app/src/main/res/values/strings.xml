@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Lucid</string>
+    <string name="request_permission">Lucid needs permission to use your device\'s camera.</string>
+    <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+</resources>

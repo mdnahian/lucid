@@ -55,7 +55,6 @@ def image_sent(raw):
         print 'user is not recognized'
 
 
-
 @app.route('/<path:path>')
 def image_file(path):
     return url_for('static', filename=path)
