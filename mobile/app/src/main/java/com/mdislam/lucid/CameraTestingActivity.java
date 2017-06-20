@@ -37,6 +37,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -49,12 +50,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -82,6 +87,16 @@ public class CameraTestingActivity extends Fragment
     private boolean isLoaded;
     private byte[] mbytes;
 
+    private TextView nothing;
+    private ImageView viewProfileBtn;
+    private ListView profileList;
+
+    private ArrayList<Profile> profiles;
+    private ProfilesAdapter profilesAdapter;
+
+    private boolean isloading = false;
+
+
     /**
      * Conversion from screen rotation to JPEG orientation.
      */
@@ -90,7 +105,7 @@ public class CameraTestingActivity extends Fragment
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final String FRAGMENT_DIALOG = "dialog";
 
-    private ProgressDialog progressDialog;
+//    private ProgressDialog progressDialog;
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -264,8 +279,11 @@ public class CameraTestingActivity extends Fragment
                     Face[] face = result.get(CaptureResult.STATISTICS_FACES);
                     if(face != null){
                         if (face.length > 0 ){
-                            Log.d(TAG, "face detected " + Integer.toString(face.length));
-                            takePicture();
+                            if(!isloading){
+                                Log.d(TAG, "face detected " + Integer.toString(face.length));
+                                takePicture();
+                                isloading = true;
+                            }
                         }
                     }
                     break;
@@ -400,11 +418,85 @@ public class CameraTestingActivity extends Fragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        profiles = new ArrayList<>();
 
-        return inflater.inflate(R.layout.activity_fragment_test, container, false);
+        View view = inflater.inflate(R.layout.activity_fragment_test, container, false);
+
+        nothing = (TextView) view.findViewById(R.id.nothing);
+
+        viewProfileBtn = (ImageView) view.findViewById(R.id.viewProfileBtn);
+        viewProfileBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+
+        profileList = (ListView) view.findViewById(R.id.users_list);
+        profilesAdapter = new ProfilesAdapter();
+        profileList.setAdapter(profilesAdapter);
+
+
+        return view;
     }
 
 
+
+    private class ProfilesAdapter extends ArrayAdapter<Profile> {
+
+        public ProfilesAdapter(){
+            super(getActivity().getApplicationContext(), R.layout.profile_list_item, profiles);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+
+            final Profile profile = getItem(position);
+
+            if(convertView == null){
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.profile_list_item, parent, false);
+            }
+
+            ImageView image = (ImageView) convertView.findViewById(R.id.image);
+            Picasso.with(getActivity().getApplicationContext()).load(profile.getImage()).into(image);
+
+            TextView name = (TextView) convertView.findViewById(R.id.name);
+            name.setText(profile.getFullname());
+
+            convertView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    Intent intent = new Intent(getActivity().getApplicationContext(), ProfileActivity.class);
+                    intent.putExtra("profile", profile);
+                    startActivity(intent);
+                }
+            });
+
+            return convertView;
+        }
+    }
+
+
+
+
+
+
+    public void addProfile(Profile profile){
+        boolean exists = false;
+        for(Profile p : profiles){
+            if(p.getEmail().equals(profile.getEmail())){
+                exists = true;
+            }
+        }
+
+        if(!exists){
+            profiles.add(profile);
+            nothing.setVisibility(View.GONE);
+            profilesAdapter.notifyDataSetChanged();
+        }
+    }
 
 
 
@@ -422,7 +514,7 @@ public class CameraTestingActivity extends Fragment
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
 
-        view.findViewById(R.id.picture).setOnClickListener(this);
+//        view.findViewById(R.id.picture).setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
 
         // add ui elements
@@ -896,7 +988,7 @@ public class CameraTestingActivity extends Fragment
 
     private Socket getSocket() {
         try {
-            mSocket = IO.socket("http://138.197.0.96:80");
+            mSocket = IO.socket("https://a3b04004.ngrok.io");
             Log.d(TAG, "Success");
         } catch (URISyntaxException e) {
             Log.d(TAG, "Failed");
@@ -933,9 +1025,22 @@ public class CameraTestingActivity extends Fragment
                     public void run() {
                         try {
 
+                            isloading = false;
+
                             JSONObject data = new JSONObject(args[0].toString());
+                            Profile profile = new Profile();
+                            profile.setFullname(data.getString("name"));
+                            profile.setEmail(data.getString("email"));
+                            profile.setPhone(data.getString("phone"));
+                            profile.setLocation(data.getString("location"));
+                            profile.setImage(data.getString("image"));
+                            profile.setWebsite(data.getString("website"));
+                            profile.setLinkedin(data.getString("linkedin"));
+                            profile.setBio(data.getString("bio"));
+                            profile.setVideo(data.getString("video"));
+                            profile.setCurrent(data.getString("current"));
 
-
+                            addProfile(profile);
 
                         } catch (JSONException e) {
                             return;
@@ -994,10 +1099,10 @@ public class CameraTestingActivity extends Fragment
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.picture: {
-                takePicture();
-                break;
-            }
+//            case R.id.picture: {
+//                takePicture();
+//                break;
+//            }
         }
     }
 

@@ -2,6 +2,10 @@ package com.mdislam.lucid;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.TextView;
+
+import java.util.ArrayList;
 
 
 public class CameraDisplayActivity extends Activity {

@@ -27,7 +27,10 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.mdislam.lucid.CameraActivity"/>
+        <activity android:name=".ProfileActivity"
+            android:screenOrientation="portrait"/>
+
+
 
     </application>
 
